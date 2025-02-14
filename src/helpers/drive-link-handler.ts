@@ -33,7 +33,7 @@ export async function checkDriveLinks(context: Context, question: string): Promi
       processedUrls.add(url);
 
       try {
-        const result = await google.drive.parseDriveLink(url);
+        const result = await google.drive.parseDriveLink(context, url);
 
         if (!result.isAccessible) {
           const permissionUrl = await google.drive.generatePermissionUrl(result.fileId);
@@ -76,7 +76,7 @@ export async function checkAccessStatus(context: Context, links: DriveLink[]): P
 
     for (const link of linksNeedingPermission) {
       try {
-        const result = await context.adapters.google.drive.parseDriveLink(link.url);
+        const result = await context.adapters.google.drive.parseDriveLink(context, link.url);
         if (!result.isAccessible) {
           hasFullAccess = false;
           break;
@@ -118,10 +118,12 @@ export function formatAccessRequestMessage(links: DriveLink[]): string {
  */
 export async function getDriveContents(context: Context, links: DriveLink[]): Promise<Record<string, string>> {
   const contents: Record<string, string> = {};
-
+  context.logger.info(`Fetching content for ${links.length} Drive files`);
   for (const link of links) {
+    context.logger.info(`Fetching content for ${link.url}`);
     try {
-      const result = await context.adapters.google.drive.parseDriveLink(link.url);
+      const result = await context.adapters.google.drive.parseDriveLink(context, link.url);
+      context.logger.info(`Parsed Drive link: ${JSON.stringify(result)}`);
       if (result.isAccessible && result.content) {
         context.logger.info(`Fetched content for "${result.name} and "${result.content}" characters`);
         contents[link.url] = `Content of "${result.name}":\n${result.content}`;

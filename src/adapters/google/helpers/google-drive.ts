@@ -1,3 +1,5 @@
+import { google } from "googleapis";
+import { Context } from "../../../types";
 import { Env } from "../../../types/env";
 
 export type DriveFileType = "document" | "spreadsheet" | "presentation" | "pdf" | "unknown";
@@ -11,11 +13,16 @@ interface ParsedDriveLink {
 }
 
 export function createGoogleDriveClient(env: Pick<Env, "GOOGLE_API_KEY">) {
+  const drive = google.drive({
+    version: "v3",
+    auth: env.GOOGLE_API_KEY,
+  });
+
   return {
     /**
      * Parse a Google Drive link and extract file information
      */
-    parseDriveLink: async (url: string): Promise<ParsedDriveLink> => {
+    parseDriveLink: async (context: Context, url: string): Promise<ParsedDriveLink> => {
       // Extract file ID from various Google Drive URL formats
       const fileId = extractFileId(url);
       if (!fileId) {
@@ -23,25 +30,39 @@ export function createGoogleDriveClient(env: Pick<Env, "GOOGLE_API_KEY">) {
       }
 
       try {
-        // Make a metadata request to check file accessibility
-        const response = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?key=${env.GOOGLE_API_KEY}&fields=mimeType,name`, { method: "GET" });
+        // Get file metadata
+        const metadataResponse = await drive.files
+          .get({
+            fileId,
+            fields: "mimeType,name",
+          })
+          .catch((error) => {
+            if (error.code === 403 || error.code === 404) {
+              return null;
+            }
+            throw error;
+          });
 
-        if (!response.ok) {
-          if (response.status === 403 || response.status === 404) {
-            return {
-              fileId,
-              fileType: "unknown",
-              isAccessible: false,
-            };
-          }
-          throw new Error(`Failed to fetch file info: ${response.statusText}`);
+        if (!metadataResponse) {
+          return {
+            fileId,
+            fileType: "unknown",
+            isAccessible: false,
+          };
         }
 
-        const data = await response.json();
+        const { mimeType = "", name } = metadataResponse.data;
         let fileType: DriveFileType = "unknown";
 
+        if (mimeType === null) {
+          return {
+            fileId,
+            fileType: "unknown",
+            isAccessible: false,
+          };
+        }
+
         // Determine file type from MIME type
-        const mimeType = data.mimeType?.toLowerCase() || "";
         if (mimeType.includes("spreadsheet")) {
           fileType = "spreadsheet";
         } else if (mimeType.includes("document")) {
@@ -55,19 +76,34 @@ export function createGoogleDriveClient(env: Pick<Env, "GOOGLE_API_KEY">) {
         // Get file content if accessible
         let content: string | undefined;
         try {
-          const contentResponse = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?key=${env.GOOGLE_API_KEY}&alt=media`, { method: "GET" });
+          const contentResponse = await drive.files.export(
+            {
+              fileId,
+              alt: "media",
+              mimeType: "text/plain",
+            },
+            { responseType: "stream" }
+          );
 
-          if (contentResponse.ok) {
+          context.logger.info("Content response status: " + contentResponse.status);
+
+          if (contentResponse.status === 200 && contentResponse.data) {
+            // Convert stream to string
+            const chunks: Buffer[] = [];
+            for await (const chunk of contentResponse.data) {
+              chunks.push(Buffer.from(chunk));
+            }
+            const rawContent = Buffer.concat(chunks).toString("utf-8");
             // For different file types, handle content appropriately
             if (fileType === "document" || fileType === "pdf") {
-              content = await contentResponse.text();
+              content = rawContent;
             } else if (fileType === "spreadsheet") {
-              const jsonData = await contentResponse.json();
-              content = JSON.stringify(jsonData, null, 2);
+              content = typeof rawContent === "string" ? rawContent : JSON.stringify(rawContent, null, 2);
             }
           }
         } catch (error) {
           // If content fetch fails, we'll still return metadata
+          context.logger.error("Failed to fetch file content:" + JSON.stringify(error));
           console.error("Failed to fetch file content:", error);
         }
 
@@ -75,7 +111,7 @@ export function createGoogleDriveClient(env: Pick<Env, "GOOGLE_API_KEY">) {
           fileId,
           fileType,
           isAccessible: true,
-          name: data.name,
+          name: name?.toString(),
           content,
         };
       } catch (error) {
