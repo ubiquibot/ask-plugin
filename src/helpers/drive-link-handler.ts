@@ -139,15 +139,22 @@ import { addCommentToIssue } from "../handlers/add-comment";
  * Handle Drive permission flow
  */
 export async function handleDrivePermissions(context: Context, question: string): Promise<{ hasPermission: boolean; message?: string; content?: string }> {
+  context.logger.info("Checking for Drive links in the question");
   // Check for Drive links
   const driveLinks = await checkDriveLinks(context, question);
+  context.logger.info(`Found ${driveLinks.length} Drive links`);
+
   if (driveLinks.length === 0) {
+    context.logger.info("No Drive links found, returning hasPermission: true");
     return { hasPermission: true };
   }
 
   // If any links need permission, start polling flow
   const accessMessage = formatAccessRequestMessage(driveLinks);
+  context.logger.info(`Access message: ${accessMessage}`);
+
   if (accessMessage) {
+    context.logger.info("Some links require permission, starting polling flow");
     // Update thinking comment with access request message
     if (context.thinkingComment) {
       await addCommentToIssue(
@@ -177,6 +184,7 @@ export async function handleDrivePermissions(context: Context, question: string)
     }
 
     if (!hasAccess) {
+      context.logger.info("Access not granted within time limit");
       if (context.thinkingComment) {
         await addCommentToIssue(context, `Access was not granted within the ${MAX_POLL_TIME / 60000} minute time limit. Please try again.`, {
           inReplyTo: { commentId: context.thinkingComment.id },
@@ -185,6 +193,7 @@ export async function handleDrivePermissions(context: Context, question: string)
       return { hasPermission: false, message: "Access not granted within time limit." };
     }
 
+    context.logger.info("Access granted to all Google Drive files");
     // Update thinking comment indicating access was granted
     if (context.thinkingComment) {
       await addCommentToIssue(context, "Access granted to all Google Drive files. Proceeding with the request.", {
@@ -193,10 +202,12 @@ export async function handleDrivePermissions(context: Context, question: string)
     }
   }
 
+  context.logger.info("Fetching contents of accessible Drive files");
   // All files are now accessible, get their contents
   const contents = await getDriveContents(context, driveLinks);
   const contentString = Object.values(contents).join("\n\n");
 
+  context.logger.info(`Returning hasPermission: true, content length: ${contentString.length}`);
   return {
     hasPermission: true,
     content: contentString || undefined,
