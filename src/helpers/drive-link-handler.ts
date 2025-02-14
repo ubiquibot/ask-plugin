@@ -16,7 +16,7 @@ interface DriveLink {
 export async function checkDriveLinks(context: Context, question: string): Promise<DriveLink[]> {
   try {
     const { google } = context.adapters;
-    const driveUrlPattern = /(https:\/\/(docs|drive|sheets|slides)\.google\.com\/[^\s]+)/g;
+    const driveUrlPattern = /https:\/\/(docs|drive|sheets|slides)\.google\.com\/[^\s"<>)}\]]+(?=[\s"<>)}\]]|$)/g;
     const matches = question.match(driveUrlPattern);
 
     if (!matches) {
@@ -123,9 +123,12 @@ export async function getDriveContents(context: Context, links: DriveLink[]): Pr
     try {
       const result = await context.adapters.google.drive.parseDriveLink(link.url);
       if (result.isAccessible && result.content) {
+        context.logger.info(`Fetched content for "${result.name} and "${result.content}" characters`);
         contents[link.url] = `Content of "${result.name}":\n${result.content}`;
       }
-    } catch {
+    } catch (error) {
+      console.log(JSON.stringify(error, null, 2));
+      context.logger.error(`Failed to fetch content for ${link.url}: ${error}`);
       continue;
     }
   }
