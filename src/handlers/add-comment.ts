@@ -1,4 +1,4 @@
-import { Context } from "../types";
+import { Context, CommentInfo } from "../types/context";
 
 interface CommentOptions {
   inReplyTo?: {
@@ -11,13 +11,16 @@ interface CommentOptions {
  * @param context - The context object containing environment and configuration details
  * @param message - The message to add as a comment
  * @param options - Optional parameters for pull request review comments
+ * @returns CommentInfo object containing the created or updated comment's information
  */
-export async function addCommentToIssue(context: Context, message: string, options?: CommentOptions): Promise<void> {
+export async function addCommentToIssue(context: Context, message: string, options?: CommentOptions): Promise<CommentInfo> {
   const { payload } = context;
   const owner = payload.repository.owner.login;
   const repo = payload.repository.name;
 
   try {
+    let commentInfo: CommentInfo;
+
     // If this is a pull request review comment
     if (options?.inReplyTo) {
       let pullNumber: number | undefined;
@@ -37,12 +40,13 @@ export async function addCommentToIssue(context: Context, message: string, optio
       if (options.inReplyTo.commentId) {
         // Reply to an existing review comment
         if (addCommentToIssue.lastCommentId) {
-          await context.octokit.rest.pulls.updateReviewComment({
+          const { data } = await context.octokit.rest.pulls.updateReviewComment({
             owner,
             repo,
             body: message,
             comment_id: addCommentToIssue.lastCommentId,
           });
+          commentInfo = createCommentInfo(data);
         } else {
           const { data } = await context.octokit.rest.pulls.createReplyForReviewComment({
             owner,
@@ -52,7 +56,10 @@ export async function addCommentToIssue(context: Context, message: string, optio
             comment_id: options.inReplyTo.commentId,
           });
           addCommentToIssue.lastCommentId = data.id;
+          commentInfo = createCommentInfo(data);
         }
+      } else {
+        throw new Error("Comment ID is required for replying to a review comment");
       }
     } else {
       // Regular issue comment
@@ -70,13 +77,14 @@ export async function addCommentToIssue(context: Context, message: string, optio
       }
 
       if (addCommentToIssue.lastCommentId) {
-        await context.octokit.rest.issues.updateComment({
+        const { data } = await context.octokit.rest.issues.updateComment({
           owner,
           repo,
           issue_number: issueNumber,
           body: message,
           comment_id: addCommentToIssue.lastCommentId,
         });
+        commentInfo = createCommentInfo(data);
       } else {
         const { data } = await context.octokit.rest.issues.createComment({
           owner,
@@ -85,8 +93,11 @@ export async function addCommentToIssue(context: Context, message: string, optio
           body: message,
         });
         addCommentToIssue.lastCommentId = data.id;
+        commentInfo = createCommentInfo(data);
       }
     }
+
+    return commentInfo;
   } catch (e: unknown) {
     const error = e instanceof Error ? e : new Error(String(e));
     let commentType = "issue_comment";
@@ -101,6 +112,28 @@ export async function addCommentToIssue(context: Context, message: string, optio
     });
     throw error;
   }
+}
+
+interface CommentData {
+  id: number;
+  body?: string | null;
+  user: {
+    login: string;
+    id: number;
+    type?: string;
+  } | null;
+}
+
+function createCommentInfo(data: CommentData): CommentInfo {
+  return {
+    id: data.id,
+    body: data.body ?? "",
+    user: {
+      login: data.user?.login ?? "",
+      id: data.user?.id ?? 0,
+      type: data.user?.type ?? "User",
+    },
+  };
 }
 
 addCommentToIssue.lastCommentId = null as number | null;

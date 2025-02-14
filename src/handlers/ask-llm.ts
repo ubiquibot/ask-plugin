@@ -1,5 +1,6 @@
 import { CompletionsType } from "../adapters/openai/helpers/completions";
 import { bubbleUpErrorComment, logger } from "../helpers/errors";
+import { handleDrivePermissions } from "../helpers/drive-link-handler";
 import { formatChatHistory } from "../helpers/format-chat-history";
 import { fetchSimilarContent } from "../helpers/issue-fetching";
 import { Context } from "../types";
@@ -9,6 +10,19 @@ import { findGroundTruths } from "./ground-truths/find-ground-truths";
 export async function askQuestion(context: Context, question: string): Promise<CompletionsType> {
   if (!question) {
     throw logger.error("No question provided");
+  }
+
+  // Handle Drive permissions and content
+  const { hasPermission, message, content } = await handleDrivePermissions(context, question);
+
+  if (!hasPermission && message) {
+    context.logger.info("Waiting for Drive permissions");
+    throw new Error(message);
+  }
+
+  // Append Drive contents to question if available
+  if (content) {
+    question = `${question}\n\n${content}`;
   }
 
   context.logger.info("Asking LLM question: " + question);
