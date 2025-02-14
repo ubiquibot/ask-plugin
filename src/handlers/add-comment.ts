@@ -21,23 +21,21 @@ export async function addCommentToIssue(context: Context, message: string, optio
   try {
     let commentInfo: CommentInfo;
 
-    // If this is a pull request review comment
-    if (options?.inReplyTo) {
+    // Handle comment replies
+    if (options?.inReplyTo?.commentId) {
+      let isPullRequest = false;
       let pullNumber: number | undefined;
 
       if ("pull_request" in payload) {
+        isPullRequest = true;
         pullNumber = payload.pull_request.number;
       } else if ("issue" in payload && payload.issue.pull_request) {
+        isPullRequest = true;
         pullNumber = payload.issue.number;
-      } else {
-        pullNumber = undefined;
       }
 
-      if (!pullNumber) {
-        throw new Error("Cannot add review comment: not a pull request");
-      }
-
-      if (options.inReplyTo.commentId) {
+      // If it's a pull request, handle review comments
+      if (isPullRequest && pullNumber) {
         // Reply to an existing review comment
         if (addCommentToIssue.lastCommentId) {
           const { data } = await context.octokit.rest.pulls.updateReviewComment({
@@ -59,10 +57,35 @@ export async function addCommentToIssue(context: Context, message: string, optio
           commentInfo = createCommentInfo(data);
         }
       } else {
-        throw new Error("Comment ID is required for replying to a review comment");
+        // For non-pull requests, use regular issue comment APIs for replies
+        const issueNumber = ("issue" in payload ? payload.issue.number : undefined) || ("pull_request" in payload ? payload.pull_request.number : undefined);
+
+        if (issueNumber === undefined) {
+          throw new Error("Cannot determine issue/PR number");
+        }
+
+        if (addCommentToIssue.lastCommentId) {
+          const { data } = await context.octokit.rest.issues.updateComment({
+            owner,
+            repo,
+            comment_id: addCommentToIssue.lastCommentId,
+            body: message,
+          });
+          commentInfo = createCommentInfo(data);
+        } else {
+          const { data } = await context.octokit.rest.issues.createComment({
+            owner,
+            repo,
+            issue_number: issueNumber,
+            body: message,
+            in_reply_to: options.inReplyTo.commentId,
+          });
+          addCommentToIssue.lastCommentId = data.id;
+          commentInfo = createCommentInfo(data);
+        }
       }
     } else {
-      // Regular issue comment
+      // New issue comment (not a reply)
       let issueNumber: number | undefined;
       if ("issue" in payload) {
         issueNumber = payload.issue.number;
