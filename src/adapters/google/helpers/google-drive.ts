@@ -80,7 +80,7 @@ export function createGoogleDriveClient(env: Pick<Env, "GOOGLE_API_KEY">) {
             {
               fileId,
               alt: "media",
-              mimeType: "text/plain",
+              mimeType: "application/vnd.google-apps.presentation",
             },
             { responseType: "stream" }
           );
