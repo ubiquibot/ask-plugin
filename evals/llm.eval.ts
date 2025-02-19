@@ -23,7 +23,7 @@ const requiredEnvVars = {
   SUPABASE_URL: process.env.SUPABASE_URL as string,
   SUPABASE_KEY: process.env.SUPABASE_KEY as string,
   OPENROUTER_API_KEY: process.env.OPENROUTER_API_KEY as string,
-  GOOGLE_API_KEY: process.env.GOOGLE_API_KEY as string,
+  GOOGLE_SERVICE_ACCOUNT_KEY: process.env.GOOGLE_SERVICE_ACCOUNT_KEY as string,
 };
 
 // Validate all required env vars are present

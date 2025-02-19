@@ -17,16 +17,20 @@ export async function checkDriveLinks(context: Context, question: string): Promi
   try {
     const { google } = context.adapters;
     const driveUrlPattern = /https:\/\/(docs|drive|sheets|slides)\.google\.com\/[^\s"<>)}\]]+(?=[\s"<>)}\]]|$)/g;
-    const matches = question.match(driveUrlPattern);
+    const matches = [...question.matchAll(driveUrlPattern)];
 
-    if (!matches) {
+    if (matches.length === 0) {
+      context.logger.info("No Drive links found in regex search");
       return [];
     }
+
+    context.logger.info(`Found ${matches.length} potential Drive links: ${matches.map((m) => m[0]).join(", ")}`);
 
     const processedUrls = new Set<string>();
     const driveLinks: DriveLink[] = [];
 
-    for (const url of matches) {
+    for (const match of matches) {
+      const url = match[0];
       if (processedUrls.has(url)) {
         continue;
       }
@@ -48,12 +52,14 @@ export async function checkDriveLinks(context: Context, question: string): Promi
             requiresPermission: false,
           });
         }
-      } catch {
+      } catch (error) {
+        context.logger.error(`Error processing Drive link ${url}: ${error}`);
         // Skip invalid links
         continue;
       }
     }
 
+    context.logger.info(`Processed ${driveLinks.length} valid Drive links`);
     return driveLinks;
   } catch (error) {
     throw bubbleUpErrorComment(context, error, false);
@@ -125,8 +131,46 @@ export async function getDriveContents(context: Context, links: DriveLink[]): Pr
       const result = await context.adapters.google.drive.parseDriveLink(context, link.url);
       context.logger.info(`Parsed Drive link: ${JSON.stringify(result)}`);
       if (result.isAccessible && result.content) {
-        context.logger.info(`Fetched content for "${result.name} and "${result.content}" characters`);
-        contents[link.url] = `Content of "${result.name}":\n${result.content}`;
+        context.logger.info(`Fetched content for "${result.metadata.name}" with type ${result.fileType}`);
+
+        if (result.isStructured && typeof result.content === "object") {
+          // Handle structured content (Google Docs, Sheets, Slides)
+          let formattedContent = "";
+          if (result.content.pages) {
+            // Google Docs
+            formattedContent = result.content.pages
+              .map((page) => {
+                let pageContent = `Page ${page.pageNumber}:\n${page.content || ""}`;
+                if (page.tables?.length) {
+                  pageContent += "\n\nTables:\n" + page.tables.map((table) => table.data.map((row) => row.join("\t")).join("\n")).join("\n\n");
+                }
+                return pageContent;
+              })
+              .join("\n\n");
+          } else if (result.content.sheets) {
+            // Google Sheets
+            formattedContent = result.content.sheets
+              .map((sheet) => `Sheet "${sheet.name}":\n${sheet.data.map((row) => row.join("\t")).join("\n")}`)
+              .join("\n\n");
+          } else if (result.content.slides) {
+            // Google Slides
+            formattedContent = result.content.slides
+              .map((slide) => {
+                const titleText = slide.title ? ` - ${slide.title}` : "";
+                return `Slide ${slide.slideNumber}${titleText}:\n${slide.textContent || ""}`;
+              })
+              .join("\n\n");
+          }
+          contents[link.url] = `Content of "${result.metadata.name}":\n\n${formattedContent}`;
+        } else if (result.isBase64) {
+          // For binary content, just indicate the type and size
+          const contentStr = result.content as string;
+          const FILE_SIZE_KB = Math.round((contentStr.length * 3) / 4 / 1024); // Approximate size of base64 data
+          contents[link.url] = `File "${result.metadata.name}" (${result.fileType}, ${FILE_SIZE_KB}KB)`;
+        } else if (typeof result.content === "string") {
+          // Plain text content
+          contents[link.url] = `Content of "${result.metadata.name}":\n${result.content}`;
+        }
       }
     } catch (error) {
       console.log(JSON.stringify(error, null, 2));

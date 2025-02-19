@@ -35,6 +35,7 @@
     "dotenv": "^16.4.5",
     "googleapis": "^144.0.0",
     "gpt-tokenizer": "^2.5.1",
+    "officeparser": "^5.1.1",
     "openai": "^4.63.0",
     "tsx": "^4.19.2",
     "voyageai": "^0.0.1-5"
