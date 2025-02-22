@@ -50,7 +50,7 @@ export async function processCommentCallback(context: Context<"issue_comment.cre
         }
       : undefined;
 
-      const thinkingComment = await addCommentToIssue(
+    const thinkingComment = await addCommentToIssue(
       context,
       `> [!TIP]
 > Thinking...`,
@@ -64,7 +64,7 @@ export async function processCommentCallback(context: Context<"issue_comment.cre
       const { hasPermission, message, content } = await handleDrivePermissions(context, question);
       if (!hasPermission) {
         logger.info("Drive permission not granted", { message });
-        return { status: 200, reason: logger.info(message || "Access not granted to Google Drive files.").logMessage.raw };
+        return { status: 403, reason: logger.info(message || "Access not granted to Google Drive files.").logMessage.raw };
       }
 
       // Append Drive contents to question if available

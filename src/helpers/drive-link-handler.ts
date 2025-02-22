@@ -233,7 +233,7 @@ export async function handleDrivePermissions(context: Context, question: string)
     }
 
     if (!hasAccess) {
-      context.logger.info("Access not granted within time limit");
+      context.logger.warn("Access not granted within time limit");
       if (context.thinkingComment) {
         await addCommentToIssue(context, `Access was not granted within the ${MAX_POLL_TIME / 60000} minute time limit. Please try again.`, {
           inReplyTo: { commentId: context.thinkingComment.id },

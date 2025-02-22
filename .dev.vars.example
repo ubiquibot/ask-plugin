@@ -6,5 +6,4 @@ OPENROUTER_API_KEY=""
 UBIQUITY_OS_APP_NAME=""
 
 # Google Cloud Platform credentials
-GOOGLE_API_KEY=""
-GOOGLE_PROJECT_ID=""  # The GCP project ID to fetch service account details
+GOOGLE_SERVICE_ACCOUNT_KEY=""
