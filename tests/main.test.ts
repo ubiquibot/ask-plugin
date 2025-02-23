@@ -282,6 +282,7 @@ function createContext(body = TEST_QUESTION) {
       VOYAGEAI_API_KEY: "test",
       SUPABASE_URL: "test",
       SUPABASE_KEY: "test",
+      GOOGLE_SERVICE_ACCOUNT_KEY: "test",
     },
     adapters: {
       supabase: {
@@ -406,6 +407,19 @@ function createContext(body = TEST_QUESTION) {
           },
           reRankTreeNodes: async (rootNode: TreeNode) => {
             return rootNode;
+          },
+        },
+      },
+      google: {
+        drive: {
+          parseDriveLink: async () => {
+            return {
+              isAccessible: true,
+              fileId: "123",
+            };
+          },
+          generatePermissionUrl: async () => {
+            return "https://google.com";
           },
         },
       },

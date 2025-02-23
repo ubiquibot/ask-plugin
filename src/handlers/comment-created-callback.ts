@@ -117,9 +117,6 @@ export async function processCommentCallback(context: Context<"issue_comment.cre
         },
       });
     }
-
-    // Clear the thinking comment from context
-    context.thinkingComment = undefined;
     return { status: 200, reason: logger.info("Comment posted successfully").logMessage.raw };
   } catch (error) {
     throw await bubbleUpErrorComment(context, error, false);
