@@ -41,6 +41,11 @@
         "default": 3,
         "description": "The max depth of referenced github issues to traverse for context",
         "type": "number"
+      },
+      "processDriveLinks": {
+        "default": true,
+        "description": "Whether to process and fetch content from Google Drive links",
+        "type": "boolean"
       }
     }
   }

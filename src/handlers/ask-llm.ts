@@ -3,10 +3,11 @@ import { bubbleUpErrorComment, logger } from "../helpers/errors";
 import { formatChatHistory } from "../helpers/format-chat-history";
 import { fetchSimilarContent } from "../helpers/issue-fetching";
 import { Context } from "../types";
+import { DriveContents } from "../types/llm";
 import { fetchRepoDependencies, fetchRepoLanguageStats } from "./ground-truths/chat-bot";
 import { findGroundTruths } from "./ground-truths/find-ground-truths";
 
-export async function askQuestion(context: Context, question: string): Promise<CompletionsType> {
+export async function askQuestion(context: Context, question: string, driveContents?: DriveContents[]): Promise<CompletionsType> {
   if (!question) {
     throw logger.error("No question provided");
   }
@@ -77,7 +78,8 @@ export async function askQuestion(context: Context, question: string): Promise<C
     logger.debug(`Ground truths tokens: ${groundTruthsTokens}`);
 
     // Get formatted chat history with remaining tokens and reranked content
-    const formattedChat = await formatChatHistory(context, maxDepth, rerankedIssues, rerankedComments, availableTokens);
+    // Pass drive contents along with other parameters to build chat history
+    const formattedChat = await formatChatHistory(context, maxDepth, rerankedIssues, rerankedComments, availableTokens, driveContents);
     logger.debug("Formatted chat history: " + formattedChat.join("\n"));
 
     // Create completion with all components

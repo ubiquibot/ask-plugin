@@ -88,6 +88,11 @@ export interface TreeNode {
   similarComments?: SimilarComment[];
   codeSnippets?: { body: string; path: string }[];
   readmeSection?: string;
+  driveContents?: Array<{
+    name: string;
+    author?: string;
+    content: string;
+  }>;
 }
 
 export interface IssueSearchResult {

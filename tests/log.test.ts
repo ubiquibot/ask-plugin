@@ -28,6 +28,11 @@ describe("Log post message test", () => {
       env: {
         UBIQUITY_OS_APP_NAME: "UbiquityOS",
       },
+      adapters: {
+        google: {
+          checkDriveLinks: jest.fn(() => []),
+        },
+      },
     } as never;
 
     await processCommentCallback(context);
