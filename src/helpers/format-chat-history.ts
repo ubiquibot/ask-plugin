@@ -1,5 +1,5 @@
 import { Context } from "../types";
-import { TokenLimits } from "../types/llm";
+import { DriveContents, TokenLimits } from "../types/llm";
 import { fetchIssueComments } from "./issue-fetching";
 import { splitKey } from "./issue";
 import { logger } from "./errors";
@@ -526,7 +526,7 @@ export async function buildChatHistoryTree(
   maxDepth: number = 2,
   similarComments: SimilarComment[],
   similarIssues: SimilarIssue[],
-  driveContents?: Array<{ name: string; content: string }>
+  driveContents?: DriveContents[]
 ): Promise<{ tree: TreeNode | null; tokenLimits: TokenLimits }> {
   const specAndBodies: Record<string, string> = {};
   const tokenLimits = createDefaultTokenLimits(context);
@@ -534,7 +534,7 @@ export async function buildChatHistoryTree(
 
   if (tree) {
     // Add drive contents to the root node if available
-    if (driveContents?.length) {
+    if (driveContents && driveContents?.length) {
       tree.driveContents = driveContents;
     }
 
@@ -557,7 +557,7 @@ export async function formatChatHistory(
   similarIssues: SimilarIssue[],
   similarComments: SimilarComment[],
   availableTokens?: number,
-  driveContents?: Array<{ name: string; content: string }>
+  driveContents?: DriveContents[]
 ): Promise<string[]> {
   const { tree, tokenLimits } = await buildChatHistoryTree(context, maxDepth, similarComments, similarIssues, driveContents);
 

@@ -3,10 +3,11 @@ import { bubbleUpErrorComment, logger } from "../helpers/errors";
 import { formatChatHistory } from "../helpers/format-chat-history";
 import { fetchSimilarContent } from "../helpers/issue-fetching";
 import { Context } from "../types";
+import { DriveContents } from "../types/llm";
 import { fetchRepoDependencies, fetchRepoLanguageStats } from "./ground-truths/chat-bot";
 import { findGroundTruths } from "./ground-truths/find-ground-truths";
 
-export async function askQuestion(context: Context, question: string, driveContents?: Array<{ name: string; content: string }>): Promise<CompletionsType> {
+export async function askQuestion(context: Context, question: string, driveContents?: DriveContents[]): Promise<CompletionsType> {
   if (!question) {
     throw logger.error("No question provided");
   }

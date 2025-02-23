@@ -1,5 +1,6 @@
 import { Context } from "../types";
 import { bubbleUpErrorComment } from "./errors";
+import { addCommentToIssue } from "../handlers/add-comment";
 
 const POLL_INTERVAL = 25000; // 25 seconds
 const MAX_POLL_TIME = 900000; // 15 minutes
@@ -14,7 +15,14 @@ interface DriveLink {
  */
 export async function checkDriveLinks(context: Context, question: string): Promise<DriveLink[]> {
   try {
+    // Check if Drive link processing is enabled in settings
+    if (context.config.processDriveLinks === false) {
+      context.logger.info("Drive link processing is disabled in settings");
+      return [];
+    }
+
     const { google } = context.adapters;
+
     const driveUrlPattern = /https:\/\/(docs|drive|sheets|slides)\.google\.com\/[^\s"<>)}\]]+(?=[\s"<>)}\]]|$)/g;
     const matches = [...question.matchAll(driveUrlPattern)];
 
@@ -189,8 +197,6 @@ export async function getDriveContents(
   });
   return { contents, driveContents };
 }
-
-import { addCommentToIssue } from "../handlers/add-comment";
 
 /**
  * Handle Drive permission flow
