@@ -450,7 +450,6 @@ export function createGoogleDriveClient(env: Pick<Env, "GOOGLE_SERVICE_ACCOUNT_K
       if (!serviceAccountEmail) {
         throw new Error("Could not fetch service account email");
       }
-      console.log("Service account email:", serviceAccountEmail);
       // Generate sharing link that pre-fills the service account email
       return `https://drive.google.com/file/d/${fileId}/view?usp=sharing`;
     },

@@ -59,20 +59,21 @@ export async function processCommentCallback(context: Context<"issue_comment.cre
     context.thinkingComment = thinkingComment;
 
     logger.info("Starting Google Drive permission handling");
+    let driveContents;
     try {
       // Handle Google Drive permissions
-      const { hasPermission, message, content } = await handleDrivePermissions(context, question);
+      const { hasPermission, message, driveContents: contents } = await handleDrivePermissions(context, question);
       if (!hasPermission) {
         logger.info("Drive permission not granted", { message });
         return { status: 403, reason: logger.info(message || "Access not granted to Google Drive files.").logMessage.raw };
       }
 
-      // Append Drive contents to question if available
-      if (content) {
-        logger.info("Appending Drive content to question", { contentLength: content.length });
-        question = `${question}\n\n${content}`;
+      // If there are drive contents, add them to the tree and append formatted content to question
+      if (contents?.length) {
+        logger.info("Processing Drive contents", { count: contents.length });
+        driveContents = contents;
       } else {
-        logger.info("No Drive content to append");
+        logger.info("No Drive content to process");
       }
     } catch (error) {
       logger.error("Error handling Drive permissions" + JSON.stringify(error), { stack: error as unknown as string });
@@ -80,7 +81,7 @@ export async function processCommentCallback(context: Context<"issue_comment.cre
     }
 
     logger.info("Asking question to LLM", { questionLength: question.length });
-    const response = await askQuestion(context, question);
+    const response = await askQuestion(context, question, driveContents);
     const { answer, tokenUsage, groundTruths } = response;
     if (!answer) {
       throw logger.error(`No answer from OpenAI`);

@@ -381,6 +381,28 @@ async function processNodeContent(
     }
   }
 
+  // Process drive contents for root node if available
+  if (!node.parent && node.driveContents?.length) {
+    const driveHeader = `${childPrefix}Google Drive Contents:`;
+    if (updateTokenCount(driveHeader, testTokenLimits)) {
+      output.push(driveHeader);
+
+      for (const doc of node.driveContents) {
+        const docHeader = `${childPrefix}├── ${doc.name}:`;
+        if (!updateTokenCount(docHeader, testTokenLimits)) break;
+        output.push(docHeader);
+
+        const docContent = doc.content
+          .split("\n")
+          .map((line) => `${childPrefix}    ${line.trim()}`)
+          .join("\n");
+        if (!updateTokenCount(docContent, testTokenLimits)) break;
+        output.push(docContent, "");
+      }
+      output.push("");
+    }
+  }
+
   // Process similar content only for root node if space allows
   if (!node.parent && testTokenLimits.runningTokenCount < testTokenLimits.tokensRemaining - 1000) {
     for (const [type, items] of [
@@ -503,17 +525,26 @@ export async function buildChatHistoryTree(
   context: Context,
   maxDepth: number = 2,
   similarComments: SimilarComment[],
-  similarIssues: SimilarIssue[]
+  similarIssues: SimilarIssue[],
+  driveContents?: Array<{ name: string; content: string }>
 ): Promise<{ tree: TreeNode | null; tokenLimits: TokenLimits }> {
   const specAndBodies: Record<string, string> = {};
   const tokenLimits = createDefaultTokenLimits(context);
   const { tree } = await buildTree(context, specAndBodies, maxDepth, tokenLimits, similarIssues, similarComments);
 
-  if (tree && "pull_request" in context.payload) {
-    const { diff_hunk, position, original_position, path, body } = context.payload.comment || {};
-    if (diff_hunk) {
-      tree.body += `\nPrimary Context: ${body || ""}\nDiff: ${diff_hunk}\nPath: ${path || ""}\nLines: ${position || ""}-${original_position || ""}`;
-      tree.comments = tree.comments?.filter((comment) => comment.id !== String(context.payload.comment?.id));
+  if (tree) {
+    // Add drive contents to the root node if available
+    if (driveContents?.length) {
+      tree.driveContents = driveContents;
+    }
+
+    // Add pull request specific content
+    if ("pull_request" in context.payload) {
+      const { diff_hunk, position, original_position, path, body } = context.payload.comment || {};
+      if (diff_hunk) {
+        tree.body += `\nPrimary Context: ${body || ""}\nDiff: ${diff_hunk}\nPath: ${path || ""}\nLines: ${position || ""}-${original_position || ""}`;
+        tree.comments = tree.comments?.filter((comment) => comment.id !== String(context.payload.comment?.id));
+      }
     }
   }
 
@@ -525,9 +556,10 @@ export async function formatChatHistory(
   maxDepth: number = 2,
   similarIssues: SimilarIssue[],
   similarComments: SimilarComment[],
-  availableTokens?: number
+  availableTokens?: number,
+  driveContents?: Array<{ name: string; content: string }>
 ): Promise<string[]> {
-  const { tree, tokenLimits } = await buildChatHistoryTree(context, maxDepth, similarComments, similarIssues);
+  const { tree, tokenLimits } = await buildChatHistoryTree(context, maxDepth, similarComments, similarIssues, driveContents);
 
   if (!tree) {
     return ["No main issue found."];

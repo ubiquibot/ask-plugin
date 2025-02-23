@@ -7,7 +7,6 @@ const MAX_POLL_TIME = 900000; // 15 minutes
 interface DriveLink {
   url: string;
   requiresPermission: boolean;
-  permissionUrl?: string;
 }
 
 /**
@@ -40,11 +39,9 @@ export async function checkDriveLinks(context: Context, question: string): Promi
         const result = await google.drive.parseDriveLink(context, url);
 
         if (!result.isAccessible) {
-          const permissionUrl = await google.drive.generatePermissionUrl(result.fileId);
           driveLinks.push({
             url,
             requiresPermission: true,
-            permissionUrl,
           });
         } else {
           driveLinks.push({
@@ -107,22 +104,26 @@ export async function checkAccessStatus(context: Context, links: DriveLink[]): P
 /**
  * Format access request message
  */
-export function formatAccessRequestMessage(links: DriveLink[]): string {
+export function formatAccessRequestMessage(context: Context, links: DriveLink[]): string {
   const linksNeedingPermission = links.filter((link) => link.requiresPermission);
 
   if (linksNeedingPermission.length === 0) {
     return "";
   }
 
-  const urlList = linksNeedingPermission.map((link) => `- ${link.permissionUrl}`).join("\n");
+  const fileList = linksNeedingPermission.map((link) => `- ${link.url}`).join("\n");
+  const serviceAccountEmail = JSON.parse(context.env.GOOGLE_SERVICE_ACCOUNT_KEY).client_email;
 
-  return `I need access to continue. Please click these links and grant permission:\n\n${urlList}\n\nI'll wait up to 15 minutes for access to be granted.`;
+  return `I need access to continue. Please share these files with ${serviceAccountEmail}:\n\n${fileList}\n\nI'll wait up to 15 minutes for access to be granted.`;
 }
 
 /**
  * Get content from Drive files once access is granted
  */
-export async function getDriveContents(context: Context, links: DriveLink[]): Promise<Record<string, string>> {
+export async function getDriveContents(
+  context: Context,
+  links: DriveLink[]
+): Promise<{ contents: Record<string, string>; driveContents: Array<{ name: string; content: string }> }> {
   const contents: Record<string, string> = {};
   context.logger.info(`Fetching content for ${links.length} Drive files`);
   for (const link of links) {
@@ -179,7 +180,14 @@ export async function getDriveContents(context: Context, links: DriveLink[]): Pr
     }
   }
 
-  return contents;
+  const driveContents = Object.entries(contents).map(([url, content]) => {
+    const match = url.match(/\/d\/([^/]+)/);
+    return {
+      name: match ? `document-${match[1]}` : url,
+      content: content,
+    };
+  });
+  return { contents, driveContents };
 }
 
 import { addCommentToIssue } from "../handlers/add-comment";
@@ -187,7 +195,10 @@ import { addCommentToIssue } from "../handlers/add-comment";
 /**
  * Handle Drive permission flow
  */
-export async function handleDrivePermissions(context: Context, question: string): Promise<{ hasPermission: boolean; message?: string; content?: string }> {
+export async function handleDrivePermissions(
+  context: Context,
+  question: string
+): Promise<{ hasPermission: boolean; message?: string; driveContents?: Array<{ name: string; content: string }> }> {
   context.logger.info("Checking for Drive links in the question");
   // Check for Drive links
   const driveLinks = await checkDriveLinks(context, question);
@@ -199,7 +210,7 @@ export async function handleDrivePermissions(context: Context, question: string)
   }
 
   // If any links need permission, start polling flow
-  const accessMessage = formatAccessRequestMessage(driveLinks);
+  const accessMessage = formatAccessRequestMessage(context, driveLinks); // Pass context here
   context.logger.info(`Access message: ${accessMessage}`);
 
   if (accessMessage) {
@@ -253,12 +264,11 @@ export async function handleDrivePermissions(context: Context, question: string)
 
   context.logger.info("Fetching contents of accessible Drive files");
   // All files are now accessible, get their contents
-  const contents = await getDriveContents(context, driveLinks);
-  const contentString = Object.values(contents).join("\n\n");
+  const { driveContents } = await getDriveContents(context, driveLinks);
 
-  context.logger.info(`Returning hasPermission: true, content length: ${contentString.length}`);
+  context.logger.info(`Returning hasPermission: true, driveContents count: ${driveContents.length}`);
   return {
     hasPermission: true,
-    content: contentString || undefined,
+    driveContents: driveContents.length > 0 ? driveContents : undefined,
   };
 }
