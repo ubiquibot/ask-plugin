@@ -238,14 +238,6 @@ export async function handleDrivePermissions(
     while (Date.now() - startTime < MAX_POLL_TIME) {
       hasAccess = await checkAccessStatus(context, driveLinks);
       if (hasAccess) break;
-
-      // Update thinking comment with waiting message
-      if (context.thinkingComment) {
-        await addCommentToIssue(context, `Still waiting for access. I'll check again in ${POLL_INTERVAL / 1000} seconds.`, {
-          inReplyTo: { commentId: context.thinkingComment.id },
-        });
-      }
-
       await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL));
     }
 
