@@ -1,16 +1,15 @@
 import { Context } from "@ubiquity-os/plugin-sdk";
 import {
+  CommentIssueSearchResult,
   FetchParams,
   Issue,
-  LinkedIssues,
-  SimplifiedComment,
-  SimilarIssue,
-  SimilarComment,
   IssueSearchResult,
-  CommentIssueSearchResult,
+  LinkedIssues,
+  SimilarComment,
+  SimilarIssue,
+  SimplifiedComment,
 } from "../types/github-types";
 import { TokenLimits } from "../types/llm";
-import { logger } from "./errors";
 import { idIssueFromComment } from "./issue";
 import { fetchPullRequestComments, fetchPullRequestDetails } from "./pull-request-fetching";
 import { createDefaultTokenLimits, updateTokenCount } from "./token-utils";
@@ -21,7 +20,7 @@ import { createDefaultTokenLimits, updateTokenCount } from "./token-utils";
  * @param issue - The optional issue number
  * @returns The unique key for the issue
  */
-export function createKey(issueUrl: string, issue?: number) {
+export function createKey(context: Context, issueUrl: string, issue?: number) {
   const urlParts = issueUrl.split("/");
 
   let key;
@@ -50,7 +49,7 @@ export function createKey(issueUrl: string, issue?: number) {
   }
 
   if (!key) {
-    throw logger.error("Invalid issue URL", {
+    throw context.logger.error("Invalid issue URL", {
       issueUrl,
       issueNumber: issue,
     });

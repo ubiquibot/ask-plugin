@@ -1,12 +1,10 @@
 import { jest } from "@jest/globals";
 import { Logs } from "@ubiquity-os/ubiquity-os-logger";
+import { Context } from "../src/types";
 
 describe("Log post message test", () => {
   it("Should post a waiting message on start", async () => {
     const addCommentToIssue = jest.fn();
-    jest.unstable_mockModule("../src/handlers/add-comment", () => ({
-      addCommentToIssue,
-    }));
     jest.unstable_mockModule("../src/handlers/ask-llm", () => ({
       askQuestion: jest.fn(() => ({
         answer: "hello",
@@ -28,14 +26,12 @@ describe("Log post message test", () => {
       env: {
         UBIQUITY_OS_APP_NAME: "UbiquityOS",
       },
-    } as never;
+      commentHandler: {
+        postComment: addCommentToIssue,
+      },
+    } as unknown as Context;
 
     await processCommentCallback(context);
-    expect(addCommentToIssue).toHaveBeenCalledWith(
-      expect.anything(),
-      `> [!TIP]
-> Thinking...`,
-      undefined
-    );
+    expect(addCommentToIssue.mock.calls[0][1]).toMatchObject({ logMessage: { raw: "Thinking..." } });
   });
 });
