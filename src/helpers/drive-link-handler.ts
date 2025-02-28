@@ -94,7 +94,12 @@ export async function checkAccessStatus(drive: GoogleDriveClient, links: DriveLi
         hasFullAccess = false;
         break;
       }
-      updated.push({ ...link, requiresPermission: false });
+      // Store the parsed result data and update permission status
+      updated.push({
+        ...link,
+        requiresPermission: false,
+        data: result,
+      });
     } catch {
       hasFullAccess = false;
       break;
