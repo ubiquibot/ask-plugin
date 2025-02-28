@@ -28,7 +28,6 @@ export async function plugin(context: Context) {
     context.logger.info("Google Drive API client initialized");
     context.adapters = createAdapters(supabase, voyageClient, openaiClient, context, drive);
   } else {
-    context.logger.info("Google Drive API client not initialized" + config.processDriveLinks);
     context.adapters = createAdapters(supabase, voyageClient, openaiClient, context);
   }
 

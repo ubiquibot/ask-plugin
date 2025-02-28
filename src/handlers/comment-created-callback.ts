@@ -60,8 +60,7 @@ export async function processCommentCallback(context: Context<"issue_comment.cre
 
     logger.info("Starting Google Drive permission handling");
     let driveContents;
-    logger.info("context", context.adapters);
-    if (context.adapters.google && context.config.processDriveLinks) {
+    if (context.adapters.google && context.config.processDriveLinks && context.config.processDriveLinks === true) {
       try {
         const result = await handleDrivePermissions(context, question);
         if (!result) {
@@ -86,7 +85,7 @@ export async function processCommentCallback(context: Context<"issue_comment.cre
         throw error;
       }
     } else {
-      logger.info("Google Drive processing skipped - adapter or configuration not available");
+      logger.info("Google Drive Skipping", { adapter: context.adapters.google, config: context.config.processDriveLinks });
       driveContents = undefined;
     }
     logger.info("Asking question to LLM", { questionLength: question.length });
