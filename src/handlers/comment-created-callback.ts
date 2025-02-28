@@ -60,28 +60,33 @@ export async function processCommentCallback(context: Context<"issue_comment.cre
 
     logger.info("Starting Google Drive permission handling");
     let driveContents;
-    try {
-      const result = await handleDrivePermissions(context, question);
-      if (!result) {
-        return {
-          status: 403,
-          reason: logger.info("Failed to process Drive permissions").logMessage.raw,
-        };
-      }
+    if (context.adapters.google && context.config.processDriveLinks) {
+      try {
+        const result = await handleDrivePermissions(context, question);
+        if (!result) {
+          return {
+            status: 403,
+            reason: "Failed to process Drive permissions",
+          };
+        }
 
-      const { hasPermission, message, driveContents: contents } = result;
-      if (!hasPermission) {
-        return {
-          status: 403,
-          reason: logger.info(message || "Access not granted to Google Drive files.").logMessage.raw,
-        };
-      }
+        const { hasPermission, message, driveContents: contents } = result;
+        if (!hasPermission) {
+          return {
+            status: 403,
+            reason: message || "Failed to process Drive permissions",
+          };
+        }
 
-      driveContents = contents?.length ? contents : undefined;
-      logger.info("Drive contents processed", { count: contents?.length || 0 });
-    } catch (error) {
-      logger.error("Drive permission error", { stack: error instanceof Error ? error.stack : "Unknown Error" });
-      throw error;
+        driveContents = contents?.length ? contents : undefined;
+        logger.info("Drive contents processed", { count: contents?.length || 0 });
+      } catch (error) {
+        logger.error("Drive permission error", { stack: error instanceof Error ? error.stack : "Unknown Error" });
+        throw error;
+      }
+    } else {
+      logger.info("Google Drive processing skipped - adapter or configuration not available");
+      driveContents = undefined;
     }
     logger.info("Asking question to LLM", { questionLength: question.length });
     const response = await askQuestion(context, question, driveContents);
