@@ -3,6 +3,7 @@ import { Context } from "../../../types";
 import { parseOfficeAsync } from "officeparser";
 import { DocumentContent, DriveFileMetadata, DriveFileType, ParsedDriveLink, ParsedOfficeContent } from "../../../types/google";
 import { SuperGoogle } from "./google";
+import { logger } from "../../../helpers/errors";
 
 const GOOGLE_APPS = "google-apps";
 const VND_PREFIX = "application/vnd.";
@@ -299,6 +300,8 @@ export class GoogleDriveClient extends SuperGoogle {
 
     try {
       const metadataResponse = await this._getFileMetadata(fileId);
+      logger.info(`Metadata response: ${metadataResponse}`);
+      console.log(`Metadata response: ${metadataResponse}`);
       if (!metadataResponse?.mimeType || !metadataResponse?.name || !metadataResponse?.id) {
         return {
           fileId,
