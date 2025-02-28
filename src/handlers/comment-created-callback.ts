@@ -62,26 +62,21 @@ export async function processCommentCallback(context: Context<"issue_comment.cre
     let driveContents;
     if (context.config.processDriveLinks && context.config.processDriveLinks === true) {
       try {
+        console.log(context.adapters.google);
         const result = await handleDrivePermissions(context, question);
         if (!result) {
-          return {
-            status: 403,
-            reason: "Failed to process Drive permissions",
-          };
+          throw logger.error("Drive permission error", { message: "No result returned" });
         }
 
         const { hasPermission, message, driveContents: contents } = result;
         if (!hasPermission) {
-          return {
-            status: 403,
-            reason: message || "Failed to process Drive permissions",
-          };
+          throw logger.error("Drive permission error", { message });
         }
 
         driveContents = contents?.length ? contents : undefined;
         logger.info("Drive contents processed", { count: contents?.length || 0 });
       } catch (error) {
-        logger.error("Drive permission error", { stack: error instanceof Error ? error.stack : "Unknown Error" });
+        logger.error("Drive Error", { stack: error instanceof Error ? error.stack : "Unknown Error" });
         throw error;
       }
     } else {
