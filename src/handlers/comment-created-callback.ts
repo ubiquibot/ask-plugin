@@ -38,19 +38,6 @@ export async function processCommentCallback(context: Context<"issue_comment.cre
   }
 
   try {
-    // Post thinking message and store its ID
-    //     await addCommentToIssue(
-    //       context,
-    //       `> [!TIP]
-    // > Thinking...`,
-    //       isPullRequestReviewComment
-    //         ? {
-    //             inReplyTo: {
-    //               commentId: payload.comment.id,
-    //             },
-    //           }
-    //         : undefined
-    //     );
     await context.commentHandler.postComment(
       context,
       context.logger.info(`> [!TIP]
@@ -61,9 +48,9 @@ export async function processCommentCallback(context: Context<"issue_comment.cre
       }
     );
 
-    logger.debug("Starting Google Drive permission handling");
     let driveContents;
     if (context.config.processDriveLinks && context.config.processDriveLinks === true) {
+      logger.debug("Starting Google Drive permission handling");
       try {
         const result = await handleDrivePermissions(context, question);
         if (!result) {
