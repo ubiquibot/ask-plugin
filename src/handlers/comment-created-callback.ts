@@ -60,7 +60,8 @@ export async function processCommentCallback(context: Context<"issue_comment.cre
 
     logger.info("Starting Google Drive permission handling");
     let driveContents;
-    if (context.adapters.google && context.config.processDriveLinks) {
+    logger.info("context", context.config);
+    if (context.adapters.google && context.config.processDriveLinks !== false) {
       try {
         const result = await handleDrivePermissions(context, question);
         if (!result) {

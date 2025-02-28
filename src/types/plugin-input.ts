@@ -22,7 +22,7 @@ export const pluginSettingsSchema = T.Object({
   ),
   similarityThreshold: T.Number({ default: 0.9, description: "When fetching embeddings context, the similarity threshold to use (1- similarityThreshold)" }),
   maxDepth: T.Optional(T.Number({ default: 3, description: "The max depth of referenced github issues to traverse for context" })), // max depth of the chat history to be fetched
-  processDriveLinks: T.Boolean({ default: true, description: "Whether to process and fetch content from Google Drive links" }),
+  processDriveLinks: T.Optional(T.Boolean({ default: true, description: "Whether to process Google Drive links" })),
 });
 
 export type PluginSettings = StaticDecode<typeof pluginSettingsSchema>;
