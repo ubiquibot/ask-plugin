@@ -50,13 +50,12 @@ export async function processCommentCallback(context: Context<"issue_comment.cre
         }
       : undefined;
 
-    const thinkingComment = await addCommentToIssue(
+    await addCommentToIssue(
       context,
       `> [!TIP]
 > Thinking...`,
       commentOptions
     );
-    context.thinkingComment = thinkingComment;
 
     logger.debug("Starting Google Drive permission handling");
     let driveContents;
@@ -100,7 +99,7 @@ export async function processCommentCallback(context: Context<"issue_comment.cre
       })
     );
 
-    //Check the type of comment
+    // Post the answer
     if ("pull_request" in payload) {
       // This is a pull request review comment
       await addCommentToIssue(context, answer + metadataString, {
@@ -110,15 +109,6 @@ export async function processCommentCallback(context: Context<"issue_comment.cre
       });
     } else {
       await addCommentToIssue(context, answer + metadataString);
-    }
-
-    // Update the thinking comment with the final answer
-    if (context.thinkingComment) {
-      await addCommentToIssue(context, answer + metadataString, {
-        inReplyTo: {
-          commentId: context.thinkingComment.id,
-        },
-      });
     }
     return { status: 200, reason: logger.info("Comment posted successfully").logMessage.raw };
   } catch (error) {
