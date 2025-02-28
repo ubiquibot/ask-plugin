@@ -31,8 +31,6 @@ export async function plugin(context: Context) {
     context.adapters = createAdapters(supabase, voyageClient, openaiClient, context);
   }
 
-  context.adapters = createAdapters(supabase, voyageClient, openaiClient, context);
-
   if (context.command) {
     return await processCommentCallback(context);
   }
