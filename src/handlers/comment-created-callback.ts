@@ -38,21 +38,27 @@ export async function processCommentCallback(context: Context<"issue_comment.cre
   }
 
   try {
-    // Determine if this is a pull request review comment by checking the event type
-    const isPullRequestReviewComment = context.eventName === "pull_request_review_comment.created";
-
     // Post thinking message and store its ID
-    await addCommentToIssue(
+    //     await addCommentToIssue(
+    //       context,
+    //       `> [!TIP]
+    // > Thinking...`,
+    //       isPullRequestReviewComment
+    //         ? {
+    //             inReplyTo: {
+    //               commentId: payload.comment.id,
+    //             },
+    //           }
+    //         : undefined
+    //     );
+    await context.commentHandler.postComment(
       context,
-      `> [!TIP]
-> Thinking...`,
-      isPullRequestReviewComment
-        ? {
-            inReplyTo: {
-              commentId: payload.comment.id,
-            },
-          }
-        : undefined
+      context.logger.info(`> [!TIP]
+ > Thinking...`),
+      {
+        updateComment: true,
+        raw: true,
+      }
     );
 
     logger.debug("Starting Google Drive permission handling");
@@ -98,17 +104,7 @@ export async function processCommentCallback(context: Context<"issue_comment.cre
     );
 
     // Post the answer by updating the thinking message
-    await addCommentToIssue(
-      context,
-      answer + metadataString,
-      isPullRequestReviewComment
-        ? {
-            inReplyTo: {
-              commentId: payload.comment.id,
-            },
-          }
-        : undefined
-    );
+    await addCommentToIssue(context, answer + metadataString);
     return { status: 200, reason: logger.info("Comment posted successfully").logMessage.raw };
   } catch (error) {
     throw await bubbleUpErrorComment(context, error, false);

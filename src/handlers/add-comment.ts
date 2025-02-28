@@ -1,11 +1,5 @@
 import { Context, CommentInfo } from "../types/context";
 
-interface CommentOptions {
-  inReplyTo?: {
-    commentId?: number; // Required for replying to existing comments
-  };
-}
-
 /**
  * Add a comment to an issue or pull request
  * @param context - The context object containing environment and configuration details
@@ -13,13 +7,13 @@ interface CommentOptions {
  * @param options - Optional parameters for pull request review comments
  * @returns CommentInfo object containing the created or updated comment's information
  */
-export async function addCommentToIssue(context: Context, message: string, options?: CommentOptions): Promise<CommentInfo> {
+export async function addCommentToIssue(context: Context, message: string): Promise<CommentInfo> {
   context.logger.info("Adding a comment...");
 
   try {
     // Use the comment handler from context to handle the comment logic
     const commentData = await context.commentHandler.postComment(context, context.logger.info(message), {
-      updateComment: !options?.inReplyTo,
+      updateComment: true,
       raw: true,
     });
 
