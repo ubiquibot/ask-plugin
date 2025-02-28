@@ -58,11 +58,10 @@ export async function processCommentCallback(context: Context<"issue_comment.cre
     );
     context.thinkingComment = thinkingComment;
 
-    logger.info("Starting Google Drive permission handling");
+    logger.debug("Starting Google Drive permission handling");
     let driveContents;
     if (context.config.processDriveLinks && context.config.processDriveLinks === true) {
       try {
-        console.log(context.adapters.google);
         const result = await handleDrivePermissions(context, question);
         if (!result) {
           throw logger.error("Drive permission error", { message: "No result returned" });
@@ -74,13 +73,13 @@ export async function processCommentCallback(context: Context<"issue_comment.cre
         }
 
         driveContents = contents?.length ? contents : undefined;
-        logger.info("Drive contents processed", { count: contents?.length || 0 });
+        logger.debug("Drive contents processed", { count: contents?.length || 0 });
       } catch (error) {
         logger.error("Drive Error", { stack: error instanceof Error ? error.stack : "Unknown Error" });
         throw error;
       }
     } else {
-      logger.info("Google Drive Skipping", { adapter: context.adapters.google, config: context.config.processDriveLinks });
+      logger.debug("Google Drive Skipping", { adapter: context.adapters.google, config: context.config.processDriveLinks });
       driveContents = undefined;
     }
     logger.info("Asking question to LLM", { questionLength: question.length });

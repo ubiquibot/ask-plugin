@@ -1,5 +1,5 @@
 import { Context } from "../types";
-import { bubbleUpErrorComment, logger } from "./errors";
+import { bubbleUpErrorComment } from "./errors";
 import { addCommentToIssue } from "../handlers/add-comment";
 import { ParsedDriveLink } from "../types/google";
 import { GoogleDriveClient } from "../adapters/google/helpers/google-drive";
@@ -20,7 +20,7 @@ export async function checkDriveLinks(context: Context, question: string): Promi
   try {
     const { google } = context.adapters;
     if (!google) {
-      context.logger.info("Skipping Drive link processing");
+      context.logger.debug("Skipping Drive link processing");
       return [];
     }
 
@@ -32,7 +32,7 @@ export async function checkDriveLinks(context: Context, question: string): Promi
       return [];
     }
 
-    context.logger.info(`Found ${matches.length} potential Drive links: ${matches.map((m) => m[0]).join(", ")}`);
+    context.logger.debug(`Found ${matches.length} potential Drive links: ${matches.map((m) => m[0]).join(", ")}`);
 
     const processedUrls = new Set<string>();
     const driveLinks: DriveLink[] = [];
@@ -88,8 +88,6 @@ export async function checkAccessStatus(drive: GoogleDriveClient, links: DriveLi
   for (const link of linksNeedingPermission) {
     try {
       const result = await drive.parseDriveLink(link.url);
-      logger.info(`Parsed Drive link: ${JSON.stringify(result)}`);
-      console.log(`Parsed Drive link: ${JSON.stringify(result)}`);
       if (!result.isAccessible || !result.content) {
         hasFullAccess = false;
         break;
@@ -136,16 +134,16 @@ export async function getDriveContents(context: Context, links: DriveLink[]): Pr
   }
 
   const driveContents: Array<{ name: string; content: string }> = [];
-  context.logger.info(`Fetching content for ${links.length} Drive files`);
+  context.logger.debug(`Fetching content for ${links.length} Drive files`);
 
   for (const link of links) {
-    context.logger.info(`Fetching content for ${link.url}`);
+    context.logger.debug(`Fetching content for ${link.url}`);
     try {
       const result = link.data || (await google.drive.parseDriveLink(link.url));
-      context.logger.info(`Parsed Drive link: ${JSON.stringify(result)}`);
+      context.logger.debug(`Parsed Drive link: ${JSON.stringify(result)}`);
 
       if (result.isAccessible && result.content) {
-        context.logger.info(`Fetched content for "${result.metadata.name}" with type ${result.fileType}`);
+        context.logger.debug(`Fetched content for "${result.metadata.name}" with type ${result.fileType}`);
         let content = "";
 
         if (result.isStructured && typeof result.content === "object") {
@@ -205,7 +203,7 @@ export async function handleDrivePermissions(
   context: Context,
   question: string
 ): Promise<{ hasPermission: boolean; message?: string; driveContents?: Array<{ name: string; content: string }> } | undefined> {
-  context.logger.info("Checking for Drive links in the question");
+  context.logger.debug("Checking for Drive links in the question");
 
   // Check if Drive link processing is enabled in settings
   if (context.config.processDriveLinks === false) {
@@ -230,10 +228,10 @@ export async function handleDrivePermissions(
 
   // If any links need permission, start polling flow
   const accessMessage = formatAccessRequestMessage(context, driveLinks); // Pass context here
-  context.logger.info(`Access message: ${accessMessage}`);
+  context.logger.debug(`Access message: ${accessMessage}`);
 
   if (accessMessage) {
-    context.logger.info("Some links require permission, starting polling flow");
+    context.logger.debug("Some links require permission, starting polling flow");
     // Update thinking comment with access request message
     if (context.thinkingComment) {
       await addCommentToIssue(
@@ -286,7 +284,7 @@ export async function handleDrivePermissions(
   context.logger.info("Fetching contents of accessible Drive files");
   // All files are now accessible, get their contents
   const { driveContents } = await getDriveContents(context, driveLinks);
-  context.logger.info(`Returning hasPermission: true, driveContents count: ${driveContents.length}`);
+  context.logger.debug(`Returning hasPermission: true, driveContents count: ${driveContents.length}`);
   return {
     hasPermission: true,
     driveContents: driveContents.length > 0 ? driveContents : undefined,

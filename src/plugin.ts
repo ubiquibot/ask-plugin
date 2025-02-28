@@ -25,7 +25,7 @@ export async function plugin(context: Context) {
       scopes: ["https://www.googleapis.com/auth/drive", "https://www.googleapis.com/auth/cloud-platform"],
     });
     const drive = google.drive({ version: "v3", auth });
-    context.logger.info("Google Drive API client initialized");
+    context.logger.debug("Google Drive API client initialized");
     context.adapters = createAdapters(supabase, voyageClient, openaiClient, context, drive);
   } else {
     context.adapters = createAdapters(supabase, voyageClient, openaiClient, context);

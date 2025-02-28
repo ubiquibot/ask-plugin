@@ -282,7 +282,6 @@ async function buildTree(
 
   try {
     const tree = await createNode(mainIssueKey, undefined, similarRefMap);
-    console.log(`Map size: ${JSON.stringify(Array.from(processedNodes.keys()))}`);
     return { tree };
   } catch (error) {
     logger.error("Error building tree", { error: error as Error });
