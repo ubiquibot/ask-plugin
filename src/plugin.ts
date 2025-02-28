@@ -19,14 +19,16 @@ export async function plugin(context: Context) {
     ...(config.openAiBaseUrl && { baseURL: config.openAiBaseUrl }),
   };
   const openaiClient = new OpenAI(openAiObject);
-  if (config.processDriveLinks) {
+  if (config.processDriveLinks && config.processDriveLinks === true) {
     const auth = new GoogleAuth({
       credentials: JSON.parse(env.GOOGLE_SERVICE_ACCOUNT_KEY),
       scopes: ["https://www.googleapis.com/auth/drive", "https://www.googleapis.com/auth/cloud-platform"],
     });
     const drive = google.drive({ version: "v3", auth });
+    context.logger.info("Google Drive API client initialized");
     context.adapters = createAdapters(supabase, voyageClient, openaiClient, context, drive);
   } else {
+    context.logger.info("Google Drive API client not initialized" + config.processDriveLinks);
     context.adapters = createAdapters(supabase, voyageClient, openaiClient, context);
   }
 
