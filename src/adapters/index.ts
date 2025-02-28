@@ -10,12 +10,18 @@ import { SuperOpenAi } from "./openai/helpers/openai";
 import OpenAI from "openai";
 import { Completions } from "./openai/helpers/completions";
 import { Rerankers } from "./voyage/helpers/rerankers";
-import { createGoogleAdapters } from "./google";
+import { drive_v3 } from "googleapis";
+import { SuperGoogle } from "./google/helpers/google";
+import { GoogleDriveClient } from "./google/helpers/google-drive";
 
-export function createAdapters(supabaseClient: SupabaseClient, voyage: VoyageAIClient, openai: OpenAI, context: Context) {
-  const { env } = context;
+export function createAdapters(supabaseClient: SupabaseClient, voyage: VoyageAIClient, openai: OpenAI, context: Context, google?: drive_v3.Drive) {
   return {
-    google: createGoogleAdapters(env),
+    ...(google && {
+      google: {
+        drive: new GoogleDriveClient(google, context),
+        super: new SuperGoogle(google, context),
+      },
+    }),
     supabase: {
       comment: new Comment(supabaseClient, context),
       issue: new Issue(supabaseClient, context),

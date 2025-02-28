@@ -61,8 +61,15 @@ export async function processCommentCallback(context: Context<"issue_comment.cre
     logger.info("Starting Google Drive permission handling");
     let driveContents;
     try {
-      const { hasPermission, message, driveContents: contents } = await handleDrivePermissions(context, question);
+      const result = await handleDrivePermissions(context, question);
+      if (!result) {
+        return {
+          status: 403,
+          reason: logger.info("Failed to process Drive permissions").logMessage.raw,
+        };
+      }
 
+      const { hasPermission, message, driveContents: contents } = result;
       if (!hasPermission) {
         return {
           status: 403,

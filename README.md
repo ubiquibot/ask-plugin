@@ -51,6 +51,7 @@ Command Ask is built as a Cloudflare Worker that integrates with GitHub's webhoo
 - **OpenRouter.ai Adapter**: Handles interactions with OpenRouter.ai for generating responses using Claude 3.5 Sonnet
 - **Voyage Adapter**: Generates embeddings using the voyage-large-2-instruct model
 - **Supabase Adapter**: Manages vector similarity search and storage using pgvector
+- **Google Drive Adapter**: Handles file access and content extraction from Google Drive
 
 #### Vector Search System
 
@@ -71,6 +72,7 @@ Command Ask is built as a Cloudflare Worker that integrates with GitHub's webhoo
 - **Issue/PR Fetching**: Recursively retrieves related GitHub conversations
 - **Chat History Formatting**: Structures conversation history for LLM context
 - **Callback Proxy**: Manages asynchronous webhook callbacks
+- **Drive Link Handler**: Processes Google Drive links and extracts content
 
 ### External Service Integration
 
@@ -98,6 +100,60 @@ Command Ask is built as a Cloudflare Worker that integrates with GitHub's webhoo
 - Combines vector similarity with text-based search for better results
 - Implements specialized functions for finding similar issues and comments
 - Stores and indexes embeddings for fast retrieval
+
+#### Google Drive Integration
+
+The system includes comprehensive Google Drive integration supporting:
+
+- File type detection and processing for:
+  - Google Workspace files (Docs, Sheets, Presentations)
+  - Microsoft Office files (Word, Excel, PowerPoint)
+  - PDFs and Images
+  - OpenDocument formats (ODT, ODS, ODP)
+  
+- Advanced file handling capabilities:
+  - Extracts text content from documents
+  - Parses spreadsheet data into structured format
+  - Processes presentation slides with titles and content
+  - Handles images with base64 encoding
+  
+- Robust error handling and accessibility features:
+  - Automatic file permission management
+  - Service account authentication
+  - Detailed error reporting for inaccessible files
+  - Permission request URL generation
+
+### Setting up Google Drive Integration
+
+To enable Google Drive integration, follow these steps:
+
+1. Create a Google Cloud Project:
+   - Go to [Google Cloud Console](https://console.cloud.google.com)
+   - Create a new project or select an existing one
+   - Enable the Google Drive API for your project
+
+2. Create a Service Account:
+   - In the Cloud Console, go to "IAM & Admin" > "Service Accounts"
+   - Click "Create Service Account"
+   - Fill in the service account details
+   - Under "Grant this service account access to project", assign the "Cloud Platform" > "Editor" role
+   - Click "Done"
+
+3. Generate Service Account Key:
+   - Find your service account in the list
+   - Click on the three dots menu (⋮) > "Manage keys"
+   - Click "Add Key" > "Create new key"
+   - Choose "JSON" format
+   - Click "Create" to download the key file
+
+4. Add the Service Account Key to your environment:
+   - Copy the entire contents of the downloaded JSON key file
+   - Add it to your `.dev.vars` file as `GOOGLE_SERVICE_ACCOUNT_KEY`
+   ```sh
+   GOOGLE_SERVICE_ACCOUNT_KEY='{"type": "service_account", "project_id": "..."}'
+   ```
+
+Note: When sharing files with the bot, you'll need to grant access to the service account's email address (found in the JSON key file as `client_email`).
 
 ### Testing Infrastructure
 
@@ -137,7 +193,7 @@ SUPABASE_URL=your_supabase_url
 SUPABASE_KEY=your_supabase_key
 VOYAGEAI_API_KEY=your_voyageai_api_key
 OPENROUTER_API_KEY=your_openrouter_key
-OPENROUTER_API_KEY=your_openrouter_api_key
+GOOGLE_SERVICE_ACCOUNT_KEY=your_service_account_key # Required for Google Drive integration
 UBIQUITY_OS_APP_NAME="UbiquityOS"
 ```
 
@@ -145,4 +201,3 @@ UBIQUITY_OS_APP_NAME="UbiquityOS"
 
 ```sh
 bun run test
-```
