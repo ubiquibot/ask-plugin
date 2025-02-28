@@ -1,5 +1,5 @@
 import { Context } from "../types";
-import { bubbleUpErrorComment, logger } from "./errors";
+import { bubbleUpErrorComment } from "./errors";
 import { addCommentToIssue } from "../handlers/add-comment";
 import { ParsedDriveLink } from "../types/google";
 import { GoogleDriveClient } from "../adapters/google/helpers/google-drive";
@@ -88,13 +88,16 @@ export async function checkAccessStatus(drive: GoogleDriveClient, links: DriveLi
   for (const link of linksNeedingPermission) {
     try {
       const result = await drive.parseDriveLink(link.url);
-      logger.info(`Parsed Drive link: ${JSON.stringify(result)}`);
-      console.log(`Parsed Drive link: ${JSON.stringify(result)}`);
       if (!result.isAccessible || !result.content) {
         hasFullAccess = false;
         break;
       }
-      updated.push({ ...link, requiresPermission: false });
+      // Store the parsed result data and update permission status
+      updated.push({
+        ...link,
+        requiresPermission: false,
+        data: result,
+      });
     } catch {
       hasFullAccess = false;
       break;
